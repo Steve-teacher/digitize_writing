@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Essay Transcriber</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1612;
+    --paper: #faf7f2;
+    --cream: #f0ead8;
+    --rust: #c44b2b;
+    --rust-light: #e8634a;
+    --gold: #d4a843;
+    --muted: #8a7f72;
+    --border: #d6cfc0;
+    --white: #ffffff;
+    --shadow: rgba(26,22,18,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background-image: 
+      radial-gradient(ellipse at 20% 0%, rgba(212,168,67,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(196,75,43,0.06) 0%, transparent 50%);
+  }
+
+  header {
+    padding: 2.5rem 3rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    background: var(--white);
+    box-shadow: 0 1px 0 var(--border), 0 2px 12px var(--shadow);
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+
+  .logo span {
+    color: var(--rust);
+  }
+
+  .tagline {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 16px var(--shadow);
+  }
+
+  .panel-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--cream);
+  }
+
+  .panel-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .panel-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--rust);
+    opacity: 0.7;
+  }
+
+  /* Upload area */
+  .upload-zone {
+    padding: 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    min-height: 280px;
+    justify-content: center;
+    border: 2px dashed transparent;
+    transition: all 0.2s;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    background: var(--cream);
+    border-color: var(--rust);
+  }
+
+  .upload-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--cream);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .upload-zone:hover .upload-icon-wrap {
+    background: rgba(196,75,43,0.08);
+    border-color: var(--rust);
+  }
+
+  .upload-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--rust);
+  }
+
+  .upload-text {
+    text-align: center;
+  }
+
+  .upload-text strong {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 0.25rem;
+  }
+
+  .upload-text span {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  #fileInput { display: none; }
+
+  .preview-wrap {
+    padding: 1rem;
+    position: relative;
+  }
+
+  .preview-wrap img {
+    width: 100%;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    display: block;
+    max-height: 400px;
+    object-fit: contain;
+    background: var(--cream);
+  }
+
+  .change-btn {
+    margin: 0.75rem 1rem 1rem;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.45rem 1rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    display: block;
+    width: calc(100% - 2rem);
+  }
+
+  .change-btn:hover {
+    background: var(--cream);
+    border-color: var(--muted);
+    color: var(--ink);
+  }
+
+  /* Options */
+  .options-row {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .option-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    font-size: 0.83rem;
+    color: var(--ink);
+  }
+
+  .option-group input[type="checkbox"] {
+    accent-color: var(--rust);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+
+  /* Transcribe button */
+  .transcribe-btn {
+    margin: 0 1.5rem 1.5rem;
+    padding: 0.85rem 1.5rem;
+    background: var(--rust);
+    color: var(--white);
+    border: none;
+    border-radius: 2px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    width: calc(100% - 3rem);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    letter-spacing: 0.01em;
+  }
+
+  .transcribe-btn:hover:not(:disabled) {
+    background: var(--rust-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(196,75,43,0.3);
+  }
+
+  .transcribe-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .transcribe-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Output panel */
+  .output-panel {
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .output-body {
+    flex: 1;
+    padding: 1.5rem;
+    min-height: 380px;
+    position: relative;
+  }
+
+  .placeholder-state {
+    height: 100%;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .placeholder-state svg {
+    width: 40px;
+    height: 40px;
+    opacity: 0.3;
+  }
+
+  .placeholder-state p {
+    font-size: 0.82rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+
+  /* Loading spinner */
+  .loading-state {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: 320px;
+    color: var(--muted);
+  }
+
+  .loading-state.active { display: flex; }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--border);
+    border-top-color: var(--rust);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-state p {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Verification badge */
+  .verified-badge {
+    display: none;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1.25rem;
+    background: linear-gradient(135deg, rgba(34,110,62,0.07), rgba(34,110,62,0.04));
+    border: 1px solid rgba(34,110,62,0.28);
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #226e3e;
+  }
+
+  .verified-badge.active { display: flex; }
+
+  .verified-badge svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: #2a8a4e;
+  }
+
+  .verified-badge .badge-text { flex: 1; }
+
+  .verified-badge .badge-time {
+    font-size: 0.62rem;
+    opacity: 0.65;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  /* Transcription wrapper with watermark */
+  .transcription-wrap {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .transcription-wrap::before {
+    content: 'HANDWRITTEN ORIGINAL';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-35deg);
+    font-family: 'DM Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    color: rgba(34,110,62,0.055);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+  }
+
+  /* Transcription result */
+  .transcription-text {
+    display: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.85;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+    position: relative;
+    z-index: 1;
+  }
+
+  .transcription-text.active { display: block; }
+
+  /* Error state */
+  .error-state {
+    display: none;
+    padding: 1rem;
+    background: rgba(196,75,43,0.08);
+    border: 1px solid rgba(196,75,43,0.25);
+    border-radius: 2px;
+    color: var(--rust);
+    font-size: 0.83rem;
+    font-family: 'DM Mono', monospace;
+    line-height: 1.6;
+  }
+
+  .error-state.active { display: block; }
+
+  /* Output actions */
+  .output-actions {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.75rem;
+    background: var(--cream);
+  }
+
+  .action-btn {
+    padding: 0.55rem 1rem;
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--ink);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .action-btn:hover:not(:disabled) {
+    background: var(--ink);
+    color: var(--white);
+    border-color: var(--ink);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .action-btn svg { width: 12px; height: 12px; }
+
+  /* Word count badge */
+  .stats-row {
+    padding: 0.6rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .stat {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  .stat strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* Camera capture button */
+  .capture-row {
+    padding: 0 1.5rem 0;
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .capture-btn {
+    flex: 1;
+    padding: 0.65rem;
+    border: 1px dashed var(--border);
+    background: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .capture-btn:hover {
+    border-color: var(--rust);
+    color: var(--rust);
+    background: rgba(196,75,43,0.04);
+  }
+
+  .capture-btn svg { width: 14px; height: 14px; }
+
+  @media (max-width: 768px) {
+    main {
+      grid-template-columns: 1fr;
+      padding: 1.5rem 1rem;
+    }
+    header { padding: 1.5rem 1.25rem; }
+  }
+
+  /* Copied toast */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--ink);
+    color: var(--white);
+    padding: 0.65rem 1.25rem;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Essay<span>Script</span></div>
+  <div class="tagline">AI-Powered Handwriting Transcription</div>
+</header>
+
+<main>
+  <!-- Left panel: Upload -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-label">Upload Essay</span>
+      <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+      </svg>
+    </div>
+
+    <!-- Upload zone -->
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-icon-wrap">
+        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <div class="upload-text">
+        <strong>Drop image here or click to browse</strong>
+        <span>JPG, PNG, HEIC, WEBP · up to 20MB</span>
+      </div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="capture-row">
+      <button class="capture-btn" id="cameraBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Open Camera
+      </button>
+    </div>
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+
+    <!-- Preview -->
+    <div id="previewWrap" style="display:none">
+      <div class="preview-wrap">
+        <img id="previewImg" src="" alt="Uploaded essay">
+      </div>
+      <button class="change-btn" id="changeBtn">↺ Change image</button>
+    </div>
+
+    <!-- Options -->
+    <div class="options-row">
+      <div class="option-group">
+        <label>
+          <input type="checkbox" id="optPreserveFormatting" checked>
+          Preserve paragraph structure
+        </label>
+      </div>
+      <div class="option-group">
+        <label>
+          <input type="checkbox" id="optCorrectSpelling">
+          Auto-correct obvious spelling errors
+        </label>
+      </div>
+      <div class="option-group">
+        <label>
+          <input type="checkbox" id="optIncludeNotes">
+          Transcribe margin notes & corrections
+        </label>
+      </div>
+    </div>
+
+    <button class="transcribe-btn" id="transcribeBtn" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 0v4m0 12v4M2 12h4m12 0h4"/>
+      </svg>
+      Transcribe Essay
+    </button>
+  </div>
+
+  <!-- Right panel: Output -->
+  <div class="panel output-panel">
+    <div class="panel-header">
+      <span class="panel-label">Transcription</span>
+      <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+    </div>
+
+    <div class="output-body">
+      <div class="placeholder-state" id="placeholderState">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <p>Upload an essay to get started</p>
+      </div>
+      <div class="loading-state" id="loadingState">
+        <div class="spinner"></div>
+        <p>Reading handwriting…</p>
+      </div>
+      <div class="verified-badge" id="verifiedBadge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span class="badge-text">Transcribed from handwritten original · EssayScript</span>
+        <span class="badge-time" id="badgeTime"></span>
+      </div>
+      <div class="transcription-wrap">
+        <div class="transcription-text" id="transcriptionText"></div>
+      </div>
+      <div class="error-state" id="errorState"></div>
+    </div>
+
+    <div class="stats-row" id="statsRow" style="display:none">
+      <span class="stat">Words: <strong id="wordCount">—</strong></span>
+      <span class="stat">Characters: <strong id="charCount">—</strong></span>
+      <span class="stat">Paragraphs: <strong id="paraCount">—</strong></span>
+    </div>
+
+    <div class="output-actions">
+      <button class="action-btn" id="copyBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy Text
+      </button>
+      <button class="action-btn" id="downloadBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download .txt
+      </button>
+      <button class="action-btn" id="clearBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        </svg>
+        Clear
+      </button>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+  const uploadZone = document.getElementById('uploadZone');
+  const fileInput = document.getElementById('fileInput');
+  const cameraBtn = document.getElementById('cameraBtn');
+  const cameraInput = document.getElementById('cameraInput');
+  const previewWrap = document.getElementById('previewWrap');
+  const previewImg = document.getElementById('previewImg');
+  const changeBtn = document.getElementById('changeBtn');
+  const transcribeBtn = document.getElementById('transcribeBtn');
+  const placeholderState = document.getElementById('placeholderState');
+  const loadingState = document.getElementById('loadingState');
+  const transcriptionText = document.getElementById('transcriptionText');
+  const errorState = document.getElementById('errorState');
+  const copyBtn = document.getElementById('copyBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const statsRow = document.getElementById('statsRow');
+  const toast = document.getElementById('toast');
+
+  let currentFile = null;
+  let currentBase64 = null;
+
+  // Upload zone interactions
+  uploadZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+  uploadZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    uploadZone.classList.add('drag-over');
+  });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  cameraBtn.addEventListener('click', () => cameraInput.click());
+  cameraInput.addEventListener('change', e => handleFile(e.target.files[0]));
+  changeBtn.addEventListener('click', () => {
+    fileInput.value = '';
+    fileInput.click();
+  });
+
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    currentFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      currentBase64 = e.target.result.split(',')[1];
+      previewImg.src = e.target.result;
+      uploadZone.style.display = 'none';
+      previewWrap.style.display = 'block';
+      transcribeBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Transcribe
+  transcribeBtn.addEventListener('click', async () => {
+    if (!currentBase64) return;
+    
+    transcribeBtn.disabled = true;
+    placeholderState.style.display = 'none';
+    transcriptionText.classList.remove('active');
+    errorState.classList.remove('active');
+    loadingState.classList.add('active');
+    statsRow.style.display = 'none';
+    copyBtn.disabled = true;
+    downloadBtn.disabled = true;
+    clearBtn.disabled = true;
+
+    const preserveFormatting = document.getElementById('optPreserveFormatting').checked;
+    const correctSpelling = document.getElementById('optCorrectSpelling').checked;
+    const includeNotes = document.getElementById('optIncludeNotes').checked;
+
+    const instructions = [];
+    if (preserveFormatting) instructions.push('Preserve the original paragraph structure and line breaks as written.');
+    if (correctSpelling) instructions.push('Silently correct obvious spelling errors while preserving the student\'s intended words.');
+    if (!correctSpelling) instructions.push('Transcribe exactly as written, including any spelling errors (do not correct them).');
+    if (includeNotes) instructions.push('Include any margin notes, cross-outs, or corrections visible in the image, indicating them with [margin note: ...] or [correction: ...] as appropriate.');
+    if (!includeNotes) instructions.push('Focus only on the main body text; ignore margin notes or stray marks.');
+    instructions.push('Output ONLY the transcribed text with no preamble, commentary, or explanation.');
+
+    const prompt = `You are an expert transcriptionist specializing in student handwriting. Carefully read this handwritten or printed essay and transcribe it verbatim into plain digital text.
+
+Instructions:
+${instructions.map(i => '- ' + i).join('\n')}
+
+Transcribe the essay now:`;
+
+    try {
+      const mediaType = currentFile.type || 'image/jpeg';
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: mediaType, data: currentBase64 }
+              },
+              { type: 'text', text: prompt }
+            ]
+          }]
+        })
+      });
+
+      const data = await response.json();
+
+      loadingState.classList.remove('active');
+
+      if (data.error) {
+        errorState.textContent = `Error: ${data.error.message}`;
+        errorState.classList.add('active');
+        transcribeBtn.disabled = false;
+        return;
+      }
+
+      const text = data.content?.map(b => b.text || '').join('') || '';
+      transcriptionText.textContent = text;
+      transcriptionText.classList.add('active');
+
+      // Verification badge
+      const now = new Date();
+      const timeStr = now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      document.getElementById('badgeTime').textContent = timeStr;
+      document.getElementById('verifiedBadge').classList.add('active');
+
+      // Stats
+      const words = text.trim().split(/\s+/).filter(Boolean).length;
+      const chars = text.length;
+      const paras = text.split(/\n\n+/).filter(Boolean).length;
+      document.getElementById('wordCount').textContent = words.toLocaleString();
+      document.getElementById('charCount').textContent = chars.toLocaleString();
+      document.getElementById('paraCount').textContent = paras;
+      statsRow.style.display = 'flex';
+
+      copyBtn.disabled = false;
+      downloadBtn.disabled = false;
+      clearBtn.disabled = false;
+      transcribeBtn.disabled = false;
+
+    } catch (err) {
+      loadingState.classList.remove('active');
+      errorState.textContent = `Network error: ${err.message}. Check that your ANTHROPIC_API_KEY environment variable is set in Vercel.`;
+      errorState.classList.add('active');
+      transcribeBtn.disabled = false;
+    }
+  });
+
+  // Copy
+  copyBtn.addEventListener('click', async () => {
+    const text = transcriptionText.textContent;
+    await navigator.clipboard.writeText(text);
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  });
+
+  // Download
+  downloadBtn.addEventListener('click', () => {
+    const text = transcriptionText.textContent;
+    const timeStr = document.getElementById('badgeTime').textContent;
+    const filename = currentFile?.name || 'unknown';
+    const header = `ESSAYSCRIPT — Transcribed from Handwritten Original\nSource file: ${filename}\nTranscribed: ${timeStr}\n${'─'.repeat(52)}\n\n`;
+    const blob = new Blob([header + text], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'essay-transcription.txt';
+    a.click();
+  });
+
+  // Clear
+  clearBtn.addEventListener('click', () => {
+    transcriptionText.classList.remove('active');
+    transcriptionText.textContent = '';
+    errorState.classList.remove('active');
+    document.getElementById('verifiedBadge').classList.remove('active');
+    statsRow.style.display = 'none';
+    placeholderState.style.display = 'flex';
+    copyBtn.disabled = true;
+    downloadBtn.disabled = true;
+    clearBtn.disabled = true;
+  });
+</script>
+</body>
+</html>
